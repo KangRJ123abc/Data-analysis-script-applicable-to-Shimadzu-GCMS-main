@@ -71,7 +71,6 @@ Data-analysis-script-applicable-to-Shimadzu-GCMS/
 ├── import_msp.py       # 导入 MoNA / MassBank 的 MSP 标准谱
 ├── templates/
 │   └── index.html      # Vue3 + ECharts 单页前端
-├── .gitignore          # 忽略本地数据库、原始数据、IDE 配置等
 └── README.md
 ```
 
