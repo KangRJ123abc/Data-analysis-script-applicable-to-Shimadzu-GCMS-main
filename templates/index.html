@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GCMS 分析工具</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background:#f5f7fa; color:#333; min-height:100vh; position:relative; }
+body::before {
+  content:"";
+  position:fixed; inset:0;
+  background-image:url('/static/b_d5dd8b0019093e4b032c33678abc4f21.jpg');
+  background-size:cover; background-repeat:no-repeat; background-position:center 65%;
+  opacity:0.1; pointer-events:none; z-index:0;
+}
+.app { max-width:1400px; margin:0 auto; padding:16px; position:relative; z-index:1; }
+h1 { font-size:22px; font-weight:600; margin-bottom:16px; color:#1a1a2e; }
+/* PLACEHOLDER_STYLE */
+
+/* 上传区 */
+.upload-zone { border:2px dashed #c0c4cc; border-radius:12px; padding:60px 20px; text-align:center;
+  cursor:pointer; transition:all .3s; background:#fff; }
+.upload-zone:hover { border-color:#409eff; background:#ecf5ff; }
+.upload-zone.dragging { border-color:#409eff; background:#d9ecff; }
+.upload-zone input { display:none; }
+.upload-icon { font-size:48px; color:#c0c4cc; margin-bottom:12px; }
+.upload-text { font-size:16px; color:#606266; }
+.upload-hint { font-size:13px; color:#909399; margin-top:8px; }
+
+/* 进度条 */
+.progress-wrap { margin:20px 0; }
+.progress-bar { height:8px; background:#e4e7ed; border-radius:4px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#409eff,#67c23a); transition:width .3s; border-radius:4px; }
+.progress-text { font-size:13px; color:#909399; margin-top:6px; text-align:center; }
+
+/* 主布局 */
+.main-layout { display:flex; gap:12px; }
+.sidebar { width:260px; flex-shrink:0; background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.08);
+  max-height:calc(100vh - 80px); overflow-y:auto; }
+.content { flex:1; min-width:0; }
+
+/* 峰列表 */
+.peak-list-header { padding:12px 16px; font-weight:600; font-size:14px; border-bottom:1px solid #ebeef5;
+  position:sticky; top:0; background:#fff; z-index:1; display:flex; justify-content:space-between; align-items:center; }
+.peak-item { padding:8px 16px; cursor:pointer; font-size:13px; display:flex; justify-content:space-between;
+  align-items:center; border-bottom:1px solid #f2f3f5; transition:background .15s; }
+.peak-item:hover { background:#f5f7fa; }
+.peak-item.active { background:#ecf5ff; border-left:3px solid #409eff; }
+.peak-item.selected { background:#f0f9eb; }
+.peak-item.skipped { background:#fef0f0; }
+.peak-badge { font-size:11px; padding:2px 6px; border-radius:10px; color:#fff; }
+.badge-done { background:#67c23a; }
+.badge-skip { background:#f56c6c; }
+.badge-pending { background:#c0c4cc; }
+.badge-istd { background:#e6a23c; }
+
+/* 图表区 */
+.chart-card { background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.08); padding:16px; margin-bottom:12px; }
+.chart-title { font-size:14px; font-weight:600; margin-bottom:8px; }
+.charts-row { display:flex; gap:12px; }
+.charts-row > div { flex:1; }
+
+/* 候选表 */
+.cand-table { width:100%; border-collapse:collapse; font-size:13px; }
+.cand-table th { background:#f5f7fa; padding:8px 10px; text-align:left; font-weight:600; border-bottom:2px solid #ebeef5;
+  position:sticky; top:0; }
+.cand-table td { padding:7px 10px; border-bottom:1px solid #ebeef5; }
+.cand-table tr:hover { background:#f5f7fa; }
+.cand-table tr.row-selected { background:#ecf5ff; }
+
+/* 按钮 */
+.btn { padding:6px 16px; border:none; border-radius:6px; cursor:pointer; font-size:13px; transition:all .2s; }
+.btn-primary { background:#409eff; color:#fff; }
+.btn-primary:hover { background:#337ecc; }
+.btn-success { background:#67c23a; color:#fff; }
+.btn-success:hover { background:#529b2e; }
+.btn-danger { background:#f56c6c; color:#fff; }
+.btn-danger:hover { background:#c45656; }
+.btn-small { padding:4px 10px; font-size:12px; }
+.btn-outline { background:transparent; border:1px solid #dcdfe6; color:#606266; }
+.btn-outline:hover { border-color:#409eff; color:#409eff; }
+
+/* 导航 */
+.nav-bar { display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding:12px 16px;
+  background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.nav-info { font-size:14px; color:#606266; }
+
+/* 结果 */
+.result-table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; border-radius:8px; overflow:hidden;
+  box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.result-table th { background:#f5f7fa; padding:10px 12px; text-align:left; font-weight:600; }
+.result-table td { padding:8px 12px; border-bottom:1px solid #ebeef5; }
+.result-actions { display:flex; gap:8px; margin:16px 0; }
+
+/* 统计卡片 */
+.stats { display:flex; gap:12px; margin-bottom:16px; }
+.stat-card { flex:1; background:#fff; border-radius:8px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,.08); text-align:center; }
+.stat-num { font-size:28px; font-weight:700; color:#409eff; }
+.stat-label { font-size:13px; color:#909399; margin-top:4px; }
+
+/* 化合物性质展开面板 */
+.cand-row { position:relative; }
+.row-expanded { background:#f5f7fa !important; }
+.prop-row td { padding:0 !important; border-bottom:1px solid #ebeef5; }
+.prop-panel { padding:10px 16px; background:#fafbfc; }
+.prop-grid { display:flex; flex-wrap:wrap; gap:6px 20px; }
+.prop-item { flex:0 0 calc(50% - 10px); font-size:12px; line-height:1.7; }
+.prop-item-full { flex:0 0 100%; }
+.prop-label { color:#909399; margin-right:6px; }
+.prop-value { color:#333; }
+.prop-odor { color:#e6a23c; font-weight:600; }
+.prop-category { color:#409eff; }
+</style>
+</head>
+<body>
+<div id="app" class="app">
+  <h1>GCMS 色谱分析工具</h1>
+  <!-- PLACEHOLDER_VUE -->
+
+  <!-- Stage 1: 上传 -->
+  <div v-if="stage==='upload'">
+    <div class="upload-zone" :class="{dragging}" @click="$refs.fileInput.click()"
+         @dragover.prevent="dragging=true" @dragleave="dragging=false" @drop.prevent="onDrop">
+      <div class="upload-icon">📂</div>
+      <div class="upload-text">点击或拖拽上传 GC-MS 文字报告 (.txt)</div>
+      <div class="upload-hint">支持岛津 GCMSsolution 导出的文字报告格式</div>
+      <input ref="fileInput" type="file" accept=".txt" @change="onFileSelect">
+    </div>
+  </div>
+
+  <!-- Stage 1.5: 爬虫进度 -->
+  <div v-if="stage==='loading'">
+    <div class="chart-card" style="text-align:center;padding:40px">
+      <div style="font-size:16px;margin-bottom:16px">正在解析数据并查询化合物信息...</div>
+      <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" :style="{width: crawlPct+'%'}"></div></div>
+        <div class="progress-text">{{crawlDone}} / {{crawlTotal}} 个 CAS 号已查询 ({{crawlPct}}%)</div>
+      </div>
+      <div style="margin-top:16px;font-size:13px;color:#909399">
+        已识别 {{peakCount}} 个色谱峰，{{candCount}} 条候选命中
+      </div>
+      <div v-if="!crawlRunning" style="margin-top:20px">
+        <button class="btn btn-primary" @click="enterAnalysis">开始分析 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage 2: 逐峰选择 -->
+  <div v-if="stage==='analysis'" class="main-layout">
+    <!-- 左侧峰列表 -->
+    <div class="sidebar">
+      <div class="peak-list-header">
+        <span>峰列表 ({{peaks.length}})</span>
+        <span style="font-size:12px;color:#909399">{{selectedCount}}/{{peaks.length}}</span>
+      </div>
+      <div v-for="p in peaks" :key="p['Peak#']" class="peak-item"
+           :class="{active: currentPeak===p['Peak#'], selected: selections[p['Peak#']], skipped: selections[p['Peak#']]===false}"
+           @click="selectPeak(p['Peak#'])">
+        <div>
+          <strong>#{{p['Peak#']}}</strong>
+          <span style="color:#909399;margin-left:6px">{{p['Ret.Time']?.toFixed(2)}}min</span>
+          <div style="font-size:11px;color:#909399;margin-top:2px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            {{p.Name || '—'}}
+          </div>
+        </div>
+        <span class="peak-badge" :class="peakBadgeClass(p)">{{peakBadgeText(p)}}</span>
+      </div>
+    </div>
+
+    <!-- 右侧内容 -->
+    <div class="content">
+      <!-- TIC 色谱图 -->
+      <div class="chart-card">
+        <div class="chart-title">TIC 色谱图 (点击峰区域选择)</div>
+        <div data-tic style="height:250px"></div>
+      </div>
+
+      <!-- 峰详情 -->
+      <div v-if="peakDetail" class="chart-card">
+        <div class="chart-title">
+          Peak #{{peakDetail.peak_no}} — {{peakDetail.name || '未知'}}
+          <span style="color:#909399;font-weight:400;font-size:13px;margin-left:12px">
+            RT {{peakDetail.ret_time?.toFixed(3)}}min | Area {{peakDetail.area?.toLocaleString()}} | {{peakDetail.area_pct}}% | SI {{peakDetail.si}}
+          </span>
+        </div>
+
+        <div class="charts-row" style="margin:12px 0">
+          <div>
+            <div style="font-size:12px;color:#909399;margin-bottom:4px">局部色谱图</div>
+            <div data-local style="height:200px"></div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:#909399;margin-bottom:4px">
+              {{refSpectrum && refSpectrum.found ? '质谱对比图（↑实验 ↓标准）' : '质谱图（实验谱）'}}
+            </div>
+            <div data-spec style="height:200px"></div>
+          </div>
+        </div>
+
+        <!-- 候选化合物表 -->
+        <div style="max-height:400px;overflow-y:auto;margin-top:12px">
+          <table class="cand-table">
+            <thead><tr>
+              <th>Hit#</th><th>SI</th><th>CAS#</th><th>英文名</th><th>中文名</th><th>FEMA</th><th>分子式</th><th>操作</th>
+            </tr></thead>
+            <tbody>
+              <template v-for="c in peakDetail.candidates" :key="c.hit">
+                <tr :class="{'row-selected': isSelected(c), 'cand-row': true, 'row-expanded': expandedHit===c.hit}"
+                    @click="onCandidateClick(c)" style="cursor:pointer">
+                  <td>{{c.hit}}</td>
+                  <td><strong>{{c.si}}</strong></td>
+                  <td>{{c.cas}}</td>
+                  <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="c.name">{{c.name}}</td>
+                  <td>{{c.chinese_name || '—'}}</td>
+                  <td>{{c.fema || '—'}}</td>
+                  <td>{{c.mol_form}}</td>
+                  <td @click.stop>
+                    <button v-if="!isSelected(c)" class="btn btn-primary btn-small" @click="choose(c)">选择</button>
+                    <button v-else class="btn btn-success btn-small">✓ 已选</button>
+                  </td>
+                </tr>
+                <!-- 展开的性质面板 -->
+                <tr v-if="expandedHit===c.hit && c.properties && Object.keys(c.properties).length" class="prop-row">
+                  <td colspan="8">
+                    <div class="prop-panel">
+                      <div class="prop-grid">
+                        <div v-if="c.properties.odor" class="prop-item">
+                          <span class="prop-label">🌸 气味</span>
+                          <span class="prop-value prop-odor">{{c.properties.odor}}</span>
+                        </div>
+                        <div v-if="c.properties.aroma_type" class="prop-item">
+                          <span class="prop-label">🏷️ 香型</span>
+                          <span class="prop-value prop-odor">{{c.properties.aroma_type}}</span>
+                        </div>
+                        <div v-if="c.properties.category" class="prop-item prop-item-full">
+                          <span class="prop-label">📂 类别</span>
+                          <span class="prop-value prop-category">{{c.properties.category}}</span>
+                        </div>
+                        <div v-if="c.properties.appearance" class="prop-item prop-item-full">
+                          <span class="prop-label">🔬 外观</span>
+                          <span class="prop-value">{{c.properties.appearance.substring(0,150)}}</span>
+                        </div>
+                        <div v-if="c.properties.boiling_point" class="prop-item">
+                          <span class="prop-label">🌡️ 沸点</span>
+                          <span class="prop-value">{{c.properties.boiling_point}}</span>
+                        </div>
+                        <div v-if="c.properties.fema" class="prop-item">
+                          <span class="prop-label">📋 FEMA</span>
+                          <span class="prop-value">{{c.properties.fema}}</span>
+                        </div>
+                        <div v-if="c.properties.usage" class="prop-item prop-item-full">
+                          <span class="prop-label">💡 用途</span>
+                          <span class="prop-value">{{c.properties.usage.substring(0,200)}}</span>
+                        </div>
+                        <div class="prop-item prop-item-full" style="margin-top:4px;padding-top:4px;border-top:1px dashed #e4e7ed">
+                          <span v-if="refSpectrum && refSpectrum.found" style="color:#67c23a;font-size:11px">📊 已加载标准谱对比 ({{refSpectrum.source}})</span>
+                          <span v-else-if="refLoading" style="color:#909399;font-size:11px">⏳ 正在查询标准谱...</span>
+                          <span v-else style="color:#909399;font-size:11px">⚠️ 该 CAS 号无标准谱数据</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-else-if="expandedHit===c.hit" class="prop-row">
+                  <td colspan="8"><div class="prop-panel" style="color:#909399;text-align:center">暂无详细性质数据 (CAS: {{c.cas}})</div></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 导航 -->
+        <div class="nav-bar">
+          <button class="btn btn-outline" @click="prevPeak" :disabled="currentPeak<=1">← 上一峰</button>
+          <div class="nav-info">
+            <button class="btn btn-danger btn-small" @click="skipPeak" style="margin-right:12px">丢弃此峰</button>
+            Peak {{currentPeak}} / {{peaks.length}}
+          </div>
+          <button class="btn btn-outline" @click="nextPeak" :disabled="currentPeak>=peaks.length">下一峰 →</button>
+        </div>
+      </div>
+
+      <!-- 完成按钮 -->
+      <div style="text-align:center;margin-top:16px">
+        <button class="btn btn-success" style="padding:10px 40px;font-size:15px" @click="doQuantify">
+          完成定量计算 (已选 {{selectedCount}} 个峰)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage 3: 结果 -->
+  <div v-if="stage==='result'">
+    <div class="stats">
+      <div class="stat-card"><div class="stat-num">{{quantResults.length}}</div><div class="stat-label">化合物数</div></div>
+      <div class="stat-card"><div class="stat-num">{{totalConc}}</div><div class="stat-label">总浓度 (mg/ml)</div></div>
+      <div class="stat-card"><div class="stat-num">{{totalAreaPct}}</div><div class="stat-label">总 Area%</div></div>
+    </div>
+
+    <div class="charts-row" style="margin-bottom:16px">
+      <div class="chart-card"><div class="chart-title">成分占比</div><div data-pie style="height:350px"></div></div>
+      <div class="chart-card"><div class="chart-title">浓度 Top 15</div><div data-bar style="height:350px"></div></div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn btn-primary" @click="exportXlsx">导出 Excel</button>
+      <button class="btn btn-outline" @click="stage='analysis'">返回修改</button>
+    </div>
+
+    <table class="result-table">
+      <thead><tr>
+        <th>序号</th><th>CAS#</th><th>中文名称</th><th>英文名称</th><th>FEMA</th><th>Area%</th><th>浓度(mg/ml)</th><th>对应峰号</th>
+      </tr></thead>
+      <tbody>
+        <tr v-for="(r,i) in quantResults" :key="i">
+          <td>{{i+1}}</td><td>{{r.cas}}</td><td>{{r.chinese_name||'—'}}</td>
+          <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="r.name">{{r.name}}</td>
+          <td>{{r.fema||'—'}}</td><td>{{r.area_pct}}</td><td>{{r.concentration}}</td><td>{{r.peaks}}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div>
+<script>
+// PLACEHOLDER_SCRIPT
+const { createApp, ref, computed, watch, nextTick, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const stage = ref('upload');
+    const dragging = ref(false);
+    const sid = ref('');
+    const peakCount = ref(0);
+    const candCount = ref(0);
+    const crawlTotal = ref(0);
+    const crawlDone = ref(0);
+    const crawlRunning = ref(true);
+    const crawlPct = computed(() => crawlTotal.value ? Math.round(crawlDone.value / crawlTotal.value * 100) : 0);
+
+    const peaks = ref([]);
+    const selections = ref({});  // peak_no -> {cas,name,chinese_name} | false(skip) | null(pending)
+    const currentPeak = ref(1);
+    const peakDetail = ref(null);
+    const chromData = ref(null);
+    const quantResults = ref([]);
+    const expandedHit = ref(null);
+    const refSpectrum = ref(null);
+    const refLoading = ref(false);
+
+    let ticChartInst = null, localChartInst = null, specChartInst = null;
+    let pieChartInst = null, barChartInst = null;
+
+    const selectedCount = computed(() => Object.values(selections.value).filter(v => v && v !== false).length);
+    const totalConc = computed(() => quantResults.value.reduce((s, r) => s + r.concentration, 0).toFixed(2));
+    const totalAreaPct = computed(() => quantResults.value.reduce((s, r) => s + r.area_pct, 0).toFixed(2));
+
+    // ---- 上传 ----
+    async function uploadFile(file) {
+      const form = new FormData();
+      form.append('file', file);
+      stage.value = 'loading';
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: form });
+        const data = await res.json();
+        sid.value = data.sid;
+        peakCount.value = data.peaks;
+        candCount.value = data.candidates;
+        crawlTotal.value = data.cas_count;
+        pollStatus();
+      } catch (e) { alert('上传失败: ' + e.message); stage.value = 'upload'; }
+    }
+    function onFileSelect(e) { if (e.target.files[0]) uploadFile(e.target.files[0]); }
+    function onDrop(e) { dragging.value = false; if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); }
+
+    // ---- 爬虫轮询 ----
+    async function pollStatus() {
+      const res = await fetch(`/api/status/${sid.value}`);
+      const d = await res.json();
+      crawlDone.value = d.done;
+      crawlTotal.value = d.total;
+      crawlRunning.value = d.running;
+      if (d.running) setTimeout(pollStatus, 1000);
+    }
+
+    // ---- 进入分析 ----
+    async function enterAnalysis() {
+      const [peakRes, chromRes] = await Promise.all([
+        fetch(`/api/peaks/${sid.value}`).then(r => r.json()),
+        fetch(`/api/chromatogram/${sid.value}`).then(r => r.json()),
+      ]);
+      peaks.value = peakRes;
+      chromData.value = chromRes;
+      // 初始化 selections
+      const sel = {};
+      peakRes.forEach(p => { sel[p['Peak#']] = p.selected || null; });
+      selections.value = sel;
+      stage.value = 'analysis';
+      await nextTick();
+      initTicChart();
+      selectPeak(1);
+    }
+
+    // ---- TIC 色谱图 ----
+    function initTicChart() {
+      const el = document.querySelector('[ref="ticChart"]') || document.querySelectorAll('.chart-card div[style*="250px"]')[0];
+      // 用 $refs 方式不太好在 setup 里拿，直接用 id
+    }
+// PLACEHOLDER_SCRIPT2
+
+    function renderTicChart(el) {
+      if (!el || !chromData.value) return;
+      if (ticChartInst) ticChartInst.dispose();
+      ticChartInst = echarts.init(el);
+      const markLines = peaks.value.map(p => {
+        const pn = p['Peak#'];
+        const sel = selections.value[pn];
+        let color = '#c0c4cc';
+        if (sel && sel !== false) color = '#67c23a';
+        else if (sel === false) color = '#f56c6c';
+        if (pn === currentPeak.value) color = '#409eff';
+        return { xAxis: p['Ret.Time'], lineStyle: { color, width: pn === currentPeak.value ? 2 : 1 },
+                 label: { show: pn === currentPeak.value, formatter: '#' + pn, fontSize: 10 } };
+      });
+      ticChartInst.setOption({
+        tooltip: { trigger: 'axis', formatter: p => `RT: ${p[0].axisValue} min<br>Intensity: ${p[0].data[1]?.toLocaleString()}` },
+        grid: { left: 60, right: 20, top: 20, bottom: 40 },
+        xAxis: { type: 'value', name: 'Ret.Time (min)', min: 'dataMin', max: 'dataMax' },
+        yAxis: { type: 'value', name: 'Intensity', axisLabel: { formatter: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v } },
+        dataZoom: [{ type: 'inside' }, { type: 'slider', height: 20, bottom: 5 }],
+        series: [{
+          type: 'line', data: chromData.value.times.map((t, i) => [t, chromData.value.intensities[i]]),
+          symbol: 'none', lineStyle: { width: 1, color: '#409eff' }, areaStyle: { color: 'rgba(64,158,255,0.08)' },
+          markLine: { silent: false, symbol: 'none', data: markLines }
+        }]
+      });
+      ticChartInst.on('click', function(params) {
+        if (params.componentType === 'markLine') {
+          const rt = params.data?.xAxis || params.value;
+          const p = peaks.value.find(pk => Math.abs(pk['Ret.Time'] - rt) < 0.01);
+          if (p) selectPeak(p['Peak#']);
+        }
+      });
+      // 点击图表区域找最近的峰
+      ticChartInst.getZr().on('click', function(params) {
+        if (params.target) return; // 已被 markLine 处理
+        const point = ticChartInst.convertFromPixel('grid', [params.offsetX, params.offsetY]);
+        if (!point) return;
+        const clickRT = point[0];
+        let closest = null, minDist = Infinity;
+        peaks.value.forEach(p => {
+          const d = Math.abs(p['Ret.Time'] - clickRT);
+          if (d < minDist) { minDist = d; closest = p; }
+        });
+        if (closest && minDist < 2) selectPeak(closest['Peak#']);
+      });
+    }
+
+    // ---- 选峰 ----
+    async function selectPeak(peakNo) {
+      currentPeak.value = peakNo;
+      expandedHit.value = null;
+      refSpectrum.value = null;
+      refLoading.value = false;
+      const res = await fetch(`/api/peak/${sid.value}/${peakNo}`);
+      peakDetail.value = await res.json();
+      await nextTick();
+      renderTicChartUpdate();
+      renderLocalChart();
+      renderSpecChart();
+    }
+
+    function renderTicChartUpdate() {
+      const el = document.querySelector('[data-tic]');
+      if (el) renderTicChart(el);
+    }
+
+    function renderLocalChart() {
+      const el = document.querySelector('[data-local]');
+      if (!el || !peakDetail.value) return;
+      if (localChartInst) localChartInst.dispose();
+      localChartInst = echarts.init(el);
+      const lc = peakDetail.value.local_chrom;
+      localChartInst.setOption({
+        tooltip: { trigger: 'axis' },
+        grid: { left: 50, right: 10, top: 10, bottom: 30 },
+        xAxis: { type: 'value', name: 'RT', min: 'dataMin', max: 'dataMax' },
+        yAxis: { type: 'value', axisLabel: { formatter: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v } },
+        series: [{
+          type: 'line', data: lc.times.map((t, i) => [t, lc.intensities[i]]),
+          symbol: 'none', lineStyle: { width: 1.5, color: '#409eff' },
+          areaStyle: { color: 'rgba(64,158,255,0.15)' },
+          markArea: { silent: true, data: [[
+            { xAxis: peakDetail.value.proc_from, itemStyle: { color: 'rgba(64,158,255,0.1)' } },
+            { xAxis: peakDetail.value.proc_to }
+          ]] },
+          markLine: { silent: true, symbol: 'none', data: [{ xAxis: peakDetail.value.ret_time, lineStyle: { color: '#f56c6c', type: 'solid' } }] }
+        }]
+      });
+    }
+
+    function renderSpecChart() {
+      const el = document.querySelector('[data-spec]');
+      if (!el || !peakDetail.value) return;
+      if (specChartInst) specChartInst.dispose();
+      specChartInst = echarts.init(el);
+      const sp = peakDetail.value.spectrum;
+      if (!sp || !sp.mz || !sp.mz.length) {
+        specChartInst.setOption({ title: { text: '无质谱数据', left: 'center', top: 'center', textStyle: { color: '#ccc' } } });
+        return;
+      }
+
+      const maxExp = Math.max(...sp.intensity, 1);
+      const expData = sp.mz.map((m, i) => [m, Math.round((sp.intensity[i] / maxExp) * 999)]);
+      const series = [{
+        name: '实验谱',
+        type: 'bar',
+        data: expData,
+        barMaxWidth: 3,
+        itemStyle: { color: '#e6a23c' }
+      }];
+
+      let yMin = 0;
+      let yMax = 999;
+      let legendData = ['实验谱'];
+
+      if (refSpectrum.value && refSpectrum.value.found && refSpectrum.value.mz && refSpectrum.value.mz.length) {
+        const ref = refSpectrum.value;
+        const maxRef = Math.max(...ref.intensity, 1);
+        const refData = ref.mz.map((m, i) => [m, -Math.round((ref.intensity[i] / maxRef) * 999)]);
+        series.push({
+          name: `标准谱 (${ref.source})`,
+          type: 'bar',
+          data: refData,
+          barMaxWidth: 3,
+          itemStyle: { color: '#409eff' }
+        });
+        legendData.push(`标准谱 (${ref.source})`);
+        yMin = -999;
+      }
+
+      specChartInst.setOption({
+        tooltip: {
+          trigger: 'axis',
+          formatter: params => {
+            const rows = [`m/z: ${params[0]?.axisValue ?? ''}`];
+            params.forEach(p => {
+              rows.push(`${p.seriesName}: ${Math.abs(p.data[1]).toLocaleString()}`);
+            });
+            return rows.join('<br>');
+          }
+        },
+        legend: { show: legendData.length > 1, top: 0, data: legendData, textStyle: { fontSize: 11 } },
+        grid: { left: 50, right: 10, top: legendData.length > 1 ? 28 : 10, bottom: 50 },
+        dataZoom: [{ type: 'inside', xAxisIndex: 0 }, { type: 'slider', xAxisIndex: 0, height: 16, bottom: 4 }],
+        xAxis: { type: 'value', name: 'm/z', min: 'dataMin', max: 'dataMax' },
+        yAxis: {
+          type: 'value',
+          min: yMin,
+          max: yMax,
+          axisLabel: { formatter: v => Math.abs(v) },
+          splitLine: { lineStyle: { color: '#f0f0f0' } }
+        },
+        series
+      });
+    }
+
+// PLACEHOLDER_SCRIPT3
+
+    // ---- 候选化合物点击 —— 加载标准谱 ----
+    async function onCandidateClick(cand) {
+      const wasExpanded = expandedHit.value === cand.hit;
+      expandedHit.value = wasExpanded ? null : cand.hit;
+      if (!wasExpanded && cand.cas && !cand.cas.match(/^0+-0+-0+$/)) {
+        refLoading.value = true;
+        refSpectrum.value = null;
+        try {
+          const res = await fetch(`/api/ref_spectrum/${encodeURIComponent(cand.cas)}`);
+          const data = await res.json();
+          // 只有当前仍是这个候选展开时才更新
+          if (expandedHit.value === cand.hit) {
+            refSpectrum.value = data.found ? data : null;
+          }
+        } catch (e) {
+          console.warn('标准谱查询失败:', e);
+          refSpectrum.value = null;
+        }
+        refLoading.value = false;
+      } else {
+        refSpectrum.value = null;
+      }
+      await nextTick();
+      renderSpecChart();
+    }
+
+    // ---- 选择/丢弃化合物 ----
+    async function choose(cand) {
+      const body = { hit: cand.hit, cas: cand.cas, name: cand.name, chinese_name: cand.chinese_name };
+      await fetch(`/api/select/${sid.value}/${currentPeak.value}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      selections.value[currentPeak.value] = body;
+      peakDetail.value.selected = body;
+      await nextTick();
+      renderTicChartUpdate();
+    }
+
+    async function skipPeak() {
+      await fetch(`/api/select/${sid.value}/${currentPeak.value}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(null)
+      });
+      selections.value[currentPeak.value] = false;
+      peakDetail.value.selected = null;
+      await nextTick();
+      renderTicChartUpdate();
+    }
+
+    function isSelected(cand) {
+      const sel = selections.value[currentPeak.value];
+      if (!sel || sel === false) return false;
+      if (sel.hit !== undefined && sel.hit !== null) return sel.hit === cand.hit;
+      return sel.cas === cand.cas && sel.name === cand.name;
+    }
+
+    function prevPeak() { if (currentPeak.value > 1) selectPeak(currentPeak.value - 1); }
+    function nextPeak() { if (currentPeak.value < peaks.value.length) selectPeak(currentPeak.value + 1); }
+
+    function peakBadgeClass(p) {
+      const pn = p['Peak#'];
+      if (p['CAS #'] === '123-96-6') return 'badge-istd';
+      const sel = selections.value[pn];
+      if (sel && sel !== false) return 'badge-done';
+      if (sel === false) return 'badge-skip';
+      return 'badge-pending';
+    }
+    function peakBadgeText(p) {
+      const pn = p['Peak#'];
+      if (p['CAS #'] === '123-96-6') return 'ISTD';
+      const sel = selections.value[pn];
+      if (sel && sel !== false) return '✓';
+      if (sel === false) return '✗';
+      return '?';
+    }
+
+    // ---- 定量 ----
+    async function doQuantify() {
+      const res = await fetch(`/api/quantify/${sid.value}`, { method: 'POST' });
+      const data = await res.json();
+      quantResults.value = data.results;
+      stage.value = 'result';
+      await nextTick();
+      renderPieChart();
+      renderBarChart();
+    }
+
+    function renderPieChart() {
+      const el = document.querySelector('[data-pie]');
+      if (!el) return;
+      if (pieChartInst) pieChartInst.dispose();
+      pieChartInst = echarts.init(el);
+      const top10 = quantResults.value.slice(0, 10);
+      const otherPct = quantResults.value.slice(10).reduce((s, r) => s + r.area_pct, 0);
+      const pieData = top10.map(r => ({ name: r.chinese_name || r.name, value: r.area_pct }));
+      if (otherPct > 0) pieData.push({ name: '其他', value: Math.round(otherPct * 100) / 100 });
+      pieChartInst.setOption({
+        tooltip: { trigger: 'item', formatter: '{b}: {c}% ({d}%)' },
+        series: [{ type: 'pie', radius: ['35%', '65%'], data: pieData, label: { fontSize: 11 },
+          emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } } }]
+      });
+    }
+
+    function renderBarChart() {
+      const el = document.querySelector('[data-bar]');
+      if (!el) return;
+      if (barChartInst) barChartInst.dispose();
+      barChartInst = echarts.init(el);
+      const top15 = quantResults.value.slice(0, 15).reverse();
+      barChartInst.setOption({
+        tooltip: { trigger: 'axis' },
+        grid: { left: 180, right: 30, top: 10, bottom: 30 },
+        xAxis: { type: 'value', name: 'mg/ml' },
+        yAxis: { type: 'category', data: top15.map(r => (r.chinese_name || r.name).substring(0, 15)),
+          axisLabel: { fontSize: 11 } },
+        series: [{ type: 'bar', data: top15.map(r => r.concentration),
+          itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: '#409eff' }, { offset: 1, color: '#67c23a' }]) } }]
+      });
+    }
+
+    async function exportXlsx() {
+      const a = document.createElement('a');
+      a.href = `/api/export/${sid.value}`;
+      a.download = 'quantitative_results.xlsx';
+      a.click();
+    }
+
+    // ---- mounted: 用 ref 替代方案 ----
+    // Vue3 setup 中用 template ref 需要 ref()，这里用 data-* 属性代替
+    watch(stage, async (val) => {
+      if (val === 'analysis') {
+        await nextTick();
+        const el = document.querySelector('[data-tic]');
+        if (el) renderTicChart(el);
+      }
+    });
+
+    return {
+      stage, dragging, sid, peakCount, candCount, crawlTotal, crawlDone, crawlRunning, crawlPct,
+      peaks, selections, currentPeak, peakDetail, chromData, quantResults, expandedHit,
+      refSpectrum, refLoading,
+      selectedCount, totalConc, totalAreaPct,
+      onFileSelect, onDrop, enterAnalysis, selectPeak, choose, skipPeak, isSelected,
+      onCandidateClick,
+      prevPeak, nextPeak, peakBadgeClass, peakBadgeText, doQuantify, exportXlsx,
+    };
+  }
+}).mount('#app');
+
+</script>
+</body>
+</html>
