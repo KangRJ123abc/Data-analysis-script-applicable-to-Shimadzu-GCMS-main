@@ -53,6 +53,8 @@ python import_msp.py MassBank_NIST.msp --source massbank
 导入后，分析界面中点击候选化合物行时将自动显示标准谱与实验谱的镜像对比图。
 
 > 提示：导入 MSP 后，标准谱数据也会写入本地 `chemical_data.db`。该数据库文件默认不会提交到 Git 仓库。
+> 注意：这两个开源的谱数据库大多以化合物的InChiKey作为索引而不是CAS
+> 推荐获取到两个谱库之后，按InChiKey为索引，利用PubChem官方的API查询对应的CAS
 
 ### 使用流程
 
