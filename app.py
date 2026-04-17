@@ -20,8 +20,8 @@ HTML_PATH = str(Path(__file__).parent / "templates" / "index.html")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 # ======================== 常量 ========================
-ISTD_CAS = "123-96-6"
-ISTD_CONC = 4.0
+ISTD_CAS = "123-96-6"    # 内标物CAS号，需要请自改
+ISTD_CONC = 4.0    # 内标物浓度，请根据实际情况填写
 DB_PATH = str(Path(__file__).parent / "chemical_data.db")
 HEADERS_WEB = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
