@@ -2,6 +2,8 @@
 
 基于 FastAPI + Vue3 + ECharts 的 GC-MS 文字报告交互式分析工具。
 
+> 说明：仓库默认**不包含**本地数据库、质谱库文件和 GC-MS 原始文本报告。`chemical_data.db`、`.msp`、`.txt` 等文件会被 `.gitignore` 排除，需由使用者在本地运行时自行生成或导入。
+
 ## 功能
 
 - 上传岛津 GCMSsolution 导出的 `.txt` 文字报告
@@ -31,6 +33,8 @@ python app.py
 
 浏览器打开 http://127.0.0.1:8765
 
+首次运行后，程序会在本地创建 `chemical_data.db`，用于缓存 ChemicalBook 查询结果。
+
 ### 导入标准质谱库（可选，推荐）
 
 从以下数据源下载 MSP 格式的质谱文件：
@@ -48,6 +52,8 @@ python import_msp.py MassBank_NIST.msp --source massbank
 
 导入后，分析界面中点击候选化合物行时将自动显示标准谱与实验谱的镜像对比图。
 
+> 提示：导入 MSP 后，标准谱数据也会写入本地 `chemical_data.db`。该数据库文件默认不会提交到 Git 仓库。
+
 ### 使用流程
 
 1. 拖拽上传 GC-MS 文字报告 (.txt)
@@ -61,11 +67,23 @@ python import_msp.py MassBank_NIST.msp --source massbank
 ```
 Data-analysis-script-applicable-to-Shimadzu-GCMS/
 ├── app.py              # FastAPI 后端（解析、爬虫、API、定量计算）
-├── chemical_data.db    # ChemicalBook 化合物数据缓存（SQLite）
+├── enrich_cas.py       # 补充/更新化合物 CAS 信息的辅助脚本
+├── import_msp.py       # 导入 MoNA / MassBank 的 MSP 标准谱
 ├── templates/
 │   └── index.html      # Vue3 + ECharts 单页前端
+├── .gitignore          # 忽略本地数据库、原始数据、IDE 配置等
 └── README.md
 ```
+
+## 本地生成但不提交的文件
+
+以下文件会在使用过程中由用户自行准备或由程序在本地生成，默认不会上传到 GitHub：
+
+- `chemical_data.db`：ChemicalBook 缓存和标准谱数据库
+- `*.msp`：MoNA / MassBank 等标准谱文件
+- `*.txt`：GC-MS 原始文字报告
+- `*.pdf`：本地分析相关文档
+- `.idea/`、`.vscode/`：IDE 配置目录
 
 ## 技术栈
 
