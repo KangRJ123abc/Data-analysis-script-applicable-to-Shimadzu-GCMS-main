@@ -13,6 +13,7 @@
 - 点击候选行展开化合物性质面板（气味、香型、类别、外观、沸点、用途），辅助判断正确命中物
 - 标准谱对比：支持导入 MoNA / MassBank 开源质谱库（MSP 格式），点击候选时显示实验谱与标准谱的镜像对比图
 - 逐峰选择或丢弃化合物，内标法（2-辛醇，4 mg/ml）自动定量计算
+-   `app.py`中已经用注释注明代表内标物物质和浓度的两个常量，请根据实际需要修改
 - 结果可视化（饼图 + 柱状图）+ 导出 Excel
 <img width="1920" height="869" alt="8545538f092d579a6c0e1e7c6169cd57" src="https://github.com/user-attachments/assets/5ada40ac-2229-4c0a-b322-ac1bfbba97c0" />
 <img width="1909" height="866" alt="d50a88c73373fc1a6b0774fabeedce68" src="https://github.com/user-attachments/assets/7acc596b-d4be-4de4-b448-719462668c46" />
