@@ -14,6 +14,11 @@
 - 标准谱对比：支持导入 MoNA / MassBank 开源质谱库（MSP 格式），点击候选时显示实验谱与标准谱的镜像对比图
 - 逐峰选择或丢弃化合物，内标法（2-辛醇，4 mg/ml）自动定量计算
 - 结果可视化（饼图 + 柱状图）+ 导出 Excel
+<img width="1920" height="869" alt="8545538f092d579a6c0e1e7c6169cd57" src="https://github.com/user-attachments/assets/5ada40ac-2229-4c0a-b322-ac1bfbba97c0" />
+<img width="1909" height="866" alt="d50a88c73373fc1a6b0774fabeedce68" src="https://github.com/user-attachments/assets/7acc596b-d4be-4de4-b448-719462668c46" />
+
+
+
 
 ## 快速开始
 
@@ -76,15 +81,6 @@ Data-analysis-script-applicable-to-Shimadzu-GCMS/
 └── README.md
 ```
 
-## 本地生成但不提交的文件
-
-以下文件会在使用过程中由用户自行准备或由程序在本地生成，默认不会上传到 GitHub：
-
-- `chemical_data.db`：ChemicalBook 缓存和标准谱数据库
-- `*.msp`：MoNA / MassBank 等标准谱文件
-- `*.txt`：GC-MS 原始文字报告
-- `*.pdf`：本地分析相关文档
-- `.idea/`、`.vscode/`：IDE 配置目录
 
 ## 技术栈
 
